@@ -103,6 +103,18 @@ export const PromptModal = ({ prompt, isOpen, onClose, onCopy }: PromptModalProp
               <p className="text-ink-muted text-base">
                 {prompt.description}
               </p>
+              {prompt.tags && prompt.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-1">
+                  {prompt.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="px-3 py-1 text-xs font-medium rounded-full bg-white/10 text-ink-muted border border-border-subtle"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Prompt Display */}

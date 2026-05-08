@@ -18,7 +18,7 @@ export const Nav = () => {
             <Search className="w-5 h-5" />
           </button>
           <a 
-            href="https://github.com" 
+            href="https://github.com/blu1606/get-prompt" 
             target="_blank" 
             rel="noopener noreferrer"
             className="text-ink-muted hover:text-ink transition-colors p-2"

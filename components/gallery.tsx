@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { PromptEntry, allPrompts } from '@/lib/prompts';
+import { allPrompts, searchPrompts, allTags, tagCounts } from '@/lib/prompts';
 import { PromptCard } from './prompt-card';
 import { PromptModal } from './prompt-modal';
+import { TagFilter } from './tag-filter';
 
 interface GalleryProps {
   searchQuery: string;
@@ -15,6 +16,7 @@ const ITEMS_PER_PAGE = 24;
 export const Gallery = ({ searchQuery, onCopy }: GalleryProps) => {
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
   const [selectedPromptId, setSelectedPromptId] = useState<number | null>(null);
+  const [activeTags, setActiveTags] = useState<string[]>([]);
 
   // Sync with URL for shareability
   useEffect(() => {
@@ -23,18 +25,15 @@ export const Gallery = ({ searchQuery, onCopy }: GalleryProps) => {
     if (id) {
       setSelectedPromptId(parseInt(id, 10));
     }
+    const tag = params.get('tag');
+    if (tag) {
+      setActiveTags(tag.split(','));
+    }
   }, []);
 
   const filteredPrompts = useMemo(() => {
-    const query = searchQuery.toLowerCase().trim();
-    if (!query) return allPrompts;
-
-    return allPrompts.filter(
-      (p) => 
-        p.title.toLowerCase().includes(query) || 
-        p.description.toLowerCase().includes(query)
-    );
-  }, [searchQuery]);
+    return searchPrompts(searchQuery, activeTags);
+  }, [searchQuery, activeTags]);
 
   const visiblePrompts = useMemo(() => {
     return filteredPrompts.slice(0, visibleCount);
@@ -59,23 +58,68 @@ export const Gallery = ({ searchQuery, onCopy }: GalleryProps) => {
     window.history.pushState({}, '', url);
   };
 
+  const handleToggleTag = (tag: string) => {
+    setActiveTags((prev) => {
+      const next = prev.includes(tag)
+        ? prev.filter((t) => t !== tag)
+        : [...prev, tag];
+
+      // Sync URL
+      const url = new URL(window.location.href);
+      if (next.length > 0) {
+        url.searchParams.set('tag', next.join(','));
+      } else {
+        url.searchParams.delete('tag');
+      }
+      window.history.replaceState({}, '', url);
+
+      return next;
+    });
+  };
+
+  const handleClearTags = () => {
+    setActiveTags([]);
+    const url = new URL(window.location.href);
+    url.searchParams.delete('tag');
+    window.history.replaceState({}, '', url);
+  };
+
   const loadMore = () => {
     setVisibleCount((prev) => Math.min(prev + ITEMS_PER_PAGE, filteredPrompts.length));
   };
 
-  // Reset count when search changes
+  // Reset count when search/tags change
   useEffect(() => {
     setVisibleCount(ITEMS_PER_PAGE);
-  }, [searchQuery]);
+  }, [searchQuery, activeTags]);
 
   return (
     <section className="bg-canvas px-6 pb-20">
       <div className="max-w-[1440px] mx-auto">
+        {/* Tag Filter */}
+        <div className="mb-6">
+          <TagFilter
+            tags={allTags}
+            activeTags={activeTags}
+            tagCounts={tagCounts}
+            onToggleTag={handleToggleTag}
+            onClearTags={handleClearTags}
+          />
+        </div>
+
         {/* Results Info */}
         <div className="mb-8 flex items-center justify-between">
           <p className="text-xs font-semibold uppercase tracking-widest text-ink-subtle">
             {filteredPrompts.length} Prompts found
           </p>
+          {activeTags.length > 0 && (
+            <button
+              onClick={handleClearTags}
+              className="text-xs text-ink-muted hover:text-ink transition-colors"
+            >
+              Clear filters
+            </button>
+          )}
         </div>
 
         {/* Grid */}
@@ -93,7 +137,7 @@ export const Gallery = ({ searchQuery, onCopy }: GalleryProps) => {
         ) : (
           <div className="py-32 flex flex-col items-center justify-center text-center">
             <p className="text-xl text-ink-muted mb-2">No prompts found</p>
-            <p className="text-sm text-ink-subtle">Try adjusting your search terms</p>
+            <p className="text-sm text-ink-subtle">Try adjusting your search terms or filters</p>
           </div>
         )}
 
